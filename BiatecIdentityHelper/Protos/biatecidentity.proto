@@ -1,0 +1,86 @@
+﻿syntax = "proto3";
+
+package biatec_identity;
+
+
+/*
+ * The document transfered to the sharer. Inner structure before signature
+ */
+message PostDocumentUnsigned {
+    bytes identity = 1;
+    bytes docid = 2;
+    bytes share = 3;
+}
+
+/*
+ * The document transfered to the sharer. Inner structure after signature
+ */
+message PostDocumentSignedRequest {
+    bytes signature = 1;
+    bytes document = 2;
+}
+
+/*
+ * The document transfered to the sharer. Inner structure of the response before encryption
+ */
+message PostDocumentSignedResponse {
+    Result result = 1;
+    bytes signature = 2;
+    bool isSuccess = 3;
+}
+
+
+
+/*
+ * The request data to fetch the specific document. Unsigned
+ */
+message GetDocumentUnsigned {
+    bytes identity = 1;
+    bytes docid = 2;
+}
+/*
+ * The request data to fetch the specific document. Signed
+ */
+message GetDocumentSignedRequest {
+    bytes signature = 1;
+    bytes DocumentRequestUnsignedBytes = 2;
+}
+
+/*
+ * The request data to fetch the specific document. Signed response before encryption
+ */
+message GetDocumentSignedResponse {
+    Result result = 1;
+    bytes signature = 2;
+    bytes document = 3;
+}
+
+
+/*
+ * Result of success or failure for processing the request messages
+ */
+message Result {
+  StatusEnum status = 1;
+  string memo = 2;
+}
+
+/*
+ * The success or failure of processing a request,
+ * used in DeRec Response messages
+ */
+enum StatusEnum {
+  /* The request was successfully handled. */
+  OK = 0;
+
+  /*
+   * The request was partially fulfilled. The memo will give more details.
+   */
+  PARTIAL = 1;
+
+  /*
+   * The request fails for some reason other than one of the specific
+   * reasons below.
+   */
+  FAIL = 2;
+
+}
