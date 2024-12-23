@@ -99,7 +99,7 @@ namespace BiatecIdentityHelper.BusinessController
         }
         private string MakeObjectKey(string identity, string docId)
         {
-            return $"shares/{identity}/{docId}.share";
+            return $"{_options.Value.RootDataFolder}/{identity}/{docId}.share";
         }
         public async Task<byte[]> RequestDocumentAsync(byte[] encryptedRequest)
         {

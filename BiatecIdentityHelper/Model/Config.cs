@@ -29,6 +29,9 @@
         /// Helper e private key in base64
         /// </summary>
         public string HelperEncryptionPrivateKeyB64 { get; set; } = string.Empty;
-
+        /// <summary>
+        /// Folder in which shares are stored
+        /// </summary>
+        public object RootDataFolder { get; internal set; } = "data";
     }
 }
