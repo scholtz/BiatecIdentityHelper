@@ -21,6 +21,32 @@ spec:
       imagePullSecrets:
         - name: regcred
       containers:
+        - name: derec-crypto-core-grpc
+          image: scholtz2/derec-crypto-core-grpc:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 10m
+              memory: "10Mi"
+            limits:
+              cpu: 1000m
+              memory: "1000Mi"
+          ports:
+            - containerPort: 50051
+              protocol: TCP
+          readinessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 2
+          livenessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 2
+            terminationGracePeriodSeconds: 1
         - name: biatec-identity-helper-1-app
           image: scholtz2/biatec-identity-helper:1.2024.12.22-main
           imagePullPolicy: Always
