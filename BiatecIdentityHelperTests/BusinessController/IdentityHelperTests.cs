@@ -152,9 +152,9 @@ namespace BiatecIdentityHelperTests.BusinessController
 
             var getDocumentSignedResponse = BiatecIdentity.GetDocumentSignedResponse.Parser.ParseFrom(encryptedResult.Message);
             Assert.That(getDocumentSignedResponse.Document.ToByteArray(), Is.EqualTo(document));
-            Assert.That(decryptedStoredResponseMsg.Result.Status, Is.EqualTo(StatusEnum.Ok));
+            Assert.That(getDocumentSignedResponse.Result.Status, Is.EqualTo(StatusEnum.Ok));
             var getDocumentSignedResponseCheckSign = await client.SignVerifyAsync(new DerecCrypto.SignVerifyRequest() { Message = getDocumentSignedResponse.Document, PublicKey = signKeysHelper.PublicKey, Signature = getDocumentSignedResponse.Signature });
-            Assert.That(decryptedStoredResponseCheckSign.Valid, Is.True);
+            Assert.That(getDocumentSignedResponseCheckSign.Valid, Is.True);
         }
 
 

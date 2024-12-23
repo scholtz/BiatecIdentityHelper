@@ -1,6 +1,7 @@
 using BiatecIdentityHelper.BusinessController;
 using BiatecIdentityHelper.Model;
 using BiatecIdentityHelper.Repository.Files;
+using Grpc.Net.Client;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +27,17 @@ else
 }
 
 var app = builder.Build();
+
+using (var channel = GrpcChannel.ForAddress("http://localhost:50051"))
+{
+    // this tests the connection to the derec crypto service and fails to start the app if the connection does not exists. it also allows to create new app configuration if not defined
+    var client = new DerecCrypto.DeRecCryptographyService.DeRecCryptographyServiceClient(channel);
+    var encKeys = client.EncryptGenerateEncryptionKey(new DerecCrypto.EncryptGenerateEncryptionKeyRequest());
+
+    app.Logger.LogInformation($"New enc keys: PK: {encKeys.PublicKey.ToBase64()} SK: {encKeys.PrivateKey.ToBase64()} ");
+    var signKeys = client.SignGenerateSigningKey(new DerecCrypto.SignGenerateSigningKeyRequest());
+    app.Logger.LogInformation($"New sign keys: PK: {signKeys.PublicKey.ToBase64()} SK: {signKeys.PrivateKey.ToBase64()} ");
+}
 
 app.UseSwagger();
 app.UseSwaggerUI();
