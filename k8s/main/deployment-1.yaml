@@ -18,8 +18,6 @@ spec:
       labels:
         app: biatec-identity-helper-1-app
     spec:
-      imagePullSecrets:
-        - name: regcred
       containers:
         - name: derec-crypto-core-grpc
           image: scholtz2/derec-crypto-core-grpc:latest
@@ -48,7 +46,7 @@ spec:
             failureThreshold: 2
             terminationGracePeriodSeconds: 1
         - name: biatec-identity-helper-1-app
-          image: scholtz2/biatec-identity-helper:1.2024.12.22-main
+          image: scholtz2/biatec-identity-helper:1.2024.12.24-main
           imagePullPolicy: Always
           resources:
             requests:
@@ -78,7 +76,38 @@ spec:
               mountPath: /app/appsettings.json
               subPath: appsettings.json
             - name: biatec-identity-helper-1-pvc
-              mountPath: /app/ipfs
+              mountPath: /app/data
+          env:
+            - name: BiatecIdentity__GatewaySignaturePublicKeyB64
+              valueFrom:
+                secretKeyRef:
+                  name: biatec-identity-helper-1-secret
+                  key: BiatecIdentity__GatewaySignaturePublicKeyB64
+            - name: BiatecIdentity__GatewayEncryptionPublicKeyB64
+              valueFrom:
+                secretKeyRef:
+                  name: biatec-identity-helper-1-secret
+                  key: BiatecIdentity__GatewayEncryptionPublicKeyB64
+            - name: BiatecIdentity__HelperSignaturePublicKeyB64
+              valueFrom:
+                secretKeyRef:
+                  name: biatec-identity-helper-1-secret
+                  key: BiatecIdentity__HelperSignaturePublicKeyB64
+            - name: BiatecIdentity__HelperSignaturePrivateKeyB64
+              valueFrom:
+                secretKeyRef:
+                  name: biatec-identity-helper-1-secret
+                  key: BiatecIdentity__HelperSignaturePrivateKeyB64
+            - name: BiatecIdentity__HelperEncryptionPublicKeyB64
+              valueFrom:
+                secretKeyRef:
+                  name: biatec-identity-helper-1-secret
+                  key: BiatecIdentity__HelperEncryptionPublicKeyB64
+            - name: BiatecIdentity__HelperEncryptionPrivateKeyB64
+              valueFrom:
+                secretKeyRef:
+                  name: biatec-identity-helper-1-secret
+                  key: BiatecIdentity__HelperEncryptionPrivateKeyB64
       volumes:
         - name: biatec-identity-helper-1-conf
           configMap:
@@ -120,7 +149,7 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: biatec-identity-ingress-main
+  name: biatec-identity-helper-1-ingress
   namespace: biatec-identity
   annotations:
     kubernetes.io/ingress.class: "nginx"
