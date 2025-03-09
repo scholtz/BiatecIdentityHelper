@@ -30,6 +30,32 @@ message PostDocumentSignedResponse {
 }
 
 
+/*
+ * The document transfered to the sharer. Inner structure after signature
+ */
+message GetDocumentVersionsSignedRequest {
+    bytes signature = 1;
+    bytes document = 2;
+}
+
+/*
+ * The document transfered to the sharer. Inner structure of the response before encryption
+ */
+message GetDocumentVersionsSignedResponse {
+    Result result = 1;
+    bytes signature = 2;
+    repeated bytes versions = 3;
+}
+
+/*
+ * The document transfered to the sharer. Inner structure before signature
+ */
+message GetDocumentVersionsUnsigned {
+    bytes identity = 1;
+    bytes docid = 2;
+}
+
+
 
 /*
  * The request data to fetch the specific document. Unsigned

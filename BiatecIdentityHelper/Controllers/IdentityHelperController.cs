@@ -44,5 +44,18 @@ namespace BiatecIdentityHelper.Controllers
             _logger.LogInformation($"GetDocument request {request.Length}");
             return _identityHelper.RequestDocumentAsync(request);
         }
+
+        /// <summary>
+        /// Returns the list of the document versions
+        /// </summary>
+        /// <param name="data">Encrypted by helper public key, signed with Gateway private key</param>
+        /// <returns>True if document has been stored</returns>
+        [Route("/v1/get-document-versions")]
+        [HttpPost]
+        public Task<byte[]> GetDocumentVersions([FromBody] byte[] request)
+        {
+            _logger.LogInformation($"GetDocumentVersions request {request.Length}");
+            return _identityHelper.GetDocumentVersionsAsync(request);
+        }
     }
 }

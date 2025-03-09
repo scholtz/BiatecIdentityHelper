@@ -1,4 +1,6 @@
-﻿using BiatecIdentityHelper.Controllers;
+﻿// #define TestS3
+
+using BiatecIdentityHelper.Controllers;
 using BiatecIdentityHelper.Repository.Files;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -10,22 +12,36 @@ namespace BiatecIdentityHelper.Tests
     [TestFixture]
     public class FilesystemStorageTests
     {
+#if TestS3
+        private Mock<ILogger<S3ObjectStorage>> _mockLogger;
+        private S3ObjectStorage _filesystemStorage;
+#else
         private Mock<ILogger<FilesystemStorage>> _mockLogger;
-        private Mock<IOptions<Model.ObjectStorage>> _mockOptions;
         private FilesystemStorage _filesystemStorage;
+#endif
+        private Mock<IOptions<Model.ObjectStorage>> _mockOptions;
         private string _testBucketPath;
 
         [SetUp]
         public void Setup()
         {
+#if TestS3
+            _mockLogger = new Mock<ILogger<S3ObjectStorage>>();
+#else
             _mockLogger = new Mock<ILogger<FilesystemStorage>>();
+#endif
             _mockOptions = new Mock<IOptions<Model.ObjectStorage>>();
 
             // Setup a test bucket path
             _testBucketPath = Path.Combine(Path.GetTempPath(), "TestBucket");
-            _mockOptions.Setup(o => o.Value).Returns(new Model.ObjectStorage { Bucket = _testBucketPath });
 
+#if TestS3
+            _mockOptions.Setup(o => o.Value).Returns(new Model.ObjectStorage { Bucket = "aledger", Type = "AWS", Host = "https://eu-central-1.linodeobjects.com", Key = "ORB", Secret = "" });
+            _filesystemStorage = new S3ObjectStorage(_mockLogger.Object, _mockOptions.Object);
+#else
+            _mockOptions.Setup(o => o.Value).Returns(new Model.ObjectStorage { Bucket = _testBucketPath, Type = "Filesystem" });
             _filesystemStorage = new FilesystemStorage(_mockLogger.Object, _mockOptions.Object);
+#endif
         }
 
         [TearDown]
@@ -50,10 +66,9 @@ namespace BiatecIdentityHelper.Tests
 
             // Assert
             Assert.That(result, Is.True);
-            string filePath = Path.Combine(_testBucketPath, objectKey);
-            Assert.That(File.Exists(filePath), Is.True);
-            string content = await File.ReadAllTextAsync(filePath);
-            Assert.That(content, Is.EqualTo("Test content"));
+
+            var loaded = await _filesystemStorage.Load(objectKey);
+            Assert.That(loaded, Is.EqualTo(fileBytes));
         }
 
         [Test]
@@ -68,8 +83,8 @@ namespace BiatecIdentityHelper.Tests
 
             // Assert
             Assert.That(result, Is.True);
-            string filePath = Path.Combine(_testBucketPath, objectKey);
-            Assert.That(File.Exists(filePath), Is.True);
+            var loaded = await _filesystemStorage.Load(objectKey);
+            Assert.That(loaded, Is.EqualTo(fileBytes));
         }
 
         [Test]
@@ -87,6 +102,29 @@ namespace BiatecIdentityHelper.Tests
 
             // Assert
             Assert.That(result, Is.False);
+        }
+
+        [Test]
+        public async Task ListVersions()
+        {
+            // Arrange
+            string objectKey = "v/testfileVersioned.txt";
+            byte[] fileBytes = Encoding.UTF8.GetBytes("Test content");
+            byte[] fileBytes2 = Encoding.UTF8.GetBytes("Test content2");
+
+            // Act
+            bool result = await _filesystemStorage.Upload(objectKey, fileBytes);
+            // Assert
+            Assert.That(result, Is.True);
+            // Act
+            bool result2 = await _filesystemStorage.Upload(objectKey, fileBytes2);
+            // Assert
+            Assert.That(result, Is.True);
+
+            var versions = await _filesystemStorage.ListVersions(objectKey);
+            Assert.That(versions.Contains(objectKey));
+            Assert.That(versions.Length > 1);
+
         }
     }
 }
