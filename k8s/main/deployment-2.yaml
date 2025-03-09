@@ -1,0 +1,175 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: biatec-identity
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: biatec-identity-helper-2-app-deployment
+  namespace: biatec-identity
+spec:
+  selector:
+    matchLabels:
+      app: biatec-identity-helper-2-app
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: biatec-identity-helper-2-app
+    spec:
+      containers:
+        - name: derec-crypto-core-grpc
+          image: scholtz2/derec-crypto-core-grpc:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 10m
+              memory: "10Mi"
+            limits:
+              cpu: 1000m
+              memory: "1000Mi"
+          ports:
+            - containerPort: 50051
+              protocol: TCP
+          readinessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 2
+          livenessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 2
+            terminationGracePeriodSeconds: 1
+        - name: biatec-identity-helper-2-app
+          image: scholtz2/biatec-identity-helper:1.2024.12.24-main
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 200m
+              memory: "200Mi"
+            limits:
+              cpu: 2000m
+              memory: "1000Mi"
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 2
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 2
+            terminationGracePeriodSeconds: 1
+          volumeMounts:
+            - name: biatec-identity-helper-2-conf
+              mountPath: /app/appsettings.json
+              subPath: appsettings.json
+            - name: biatec-identity-helper-2-pvc
+              mountPath: /app/data
+          env:
+            - name: BiatecIdentity__GatewaySignaturePublicKeyB64
+              valueFrom:
+                secretKeyRef:
+                  name: biatec-identity-helper-2-secret
+                  key: BiatecIdentity__GatewaySignaturePublicKeyB64
+            - name: BiatecIdentity__GatewayEncryptionPublicKeyB64
+              valueFrom:
+                secretKeyRef:
+                  name: biatec-identity-helper-2-secret
+                  key: BiatecIdentity__GatewayEncryptionPublicKeyB64
+            - name: BiatecIdentity__HelperSignaturePublicKeyB64
+              valueFrom:
+                secretKeyRef:
+                  name: biatec-identity-helper-2-secret
+                  key: BiatecIdentity__HelperSignaturePublicKeyB64
+            - name: BiatecIdentity__HelperSignaturePrivateKeyB64
+              valueFrom:
+                secretKeyRef:
+                  name: biatec-identity-helper-2-secret
+                  key: BiatecIdentity__HelperSignaturePrivateKeyB64
+            - name: BiatecIdentity__HelperEncryptionPublicKeyB64
+              valueFrom:
+                secretKeyRef:
+                  name: biatec-identity-helper-2-secret
+                  key: BiatecIdentity__HelperEncryptionPublicKeyB64
+            - name: BiatecIdentity__HelperEncryptionPrivateKeyB64
+              valueFrom:
+                secretKeyRef:
+                  name: biatec-identity-helper-2-secret
+                  key: BiatecIdentity__HelperEncryptionPrivateKeyB64
+      volumes:
+        - name: biatec-identity-helper-2-conf
+          configMap:
+            name: biatec-identity-helper-2-conf
+        - name: biatec-identity-helper-2-pvc
+          persistentVolumeClaim:
+            claimName: biatec-identity-helper-2-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: biatec-identity-helper-2-pvc
+  namespace: biatec-identity
+spec:
+  storageClassName: nfs-slow-retain
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: biatec-identity-helper-2-service
+  namespace: biatec-identity
+spec:
+  type: ClusterIP
+  selector:
+    app: biatec-identity-helper-2-app
+  ports:
+    - name: http
+      protocol: TCP
+      appProtocol: http
+      port: 8080
+      targetPort: 8080
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: biatec-identity-helper-2-ingress
+  namespace: biatec-identity
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  #  ingressClassName: "nginx"
+  tls:
+    - hosts:
+        - biatec-identity-helper-2.de.biatec.io
+      secretName: tls-biatec-identity-helper-2.de.biatec.io
+  rules:
+    - host: biatec-identity-helper-2.de.biatec.io
+      http:
+        paths:
+          - path: /(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: biatec-identity-helper-2-service
+                port:
+                  number: 8080
