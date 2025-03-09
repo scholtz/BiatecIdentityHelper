@@ -25,6 +25,85 @@ namespace BiatecIdentityHelper.BusinessController
             _fileStorage = fileStorage;
         }
         /// <summary>
+        /// Parse the encrypted request to fetch the list of documents for user
+        /// </summary>
+        /// <param name="encryptedRequest"></param>
+        /// <returns></returns>
+        public async Task<byte[]> GetUserDocumentsAsync(byte[] encryptedRequest)
+        {
+            using var channel = GrpcChannel.ForAddress("http://localhost:50051");
+            var client = new DerecCrypto.DeRecCryptographyService.DeRecCryptographyServiceClient(channel);
+
+            var gatewaySigPublicKey = Google.Protobuf.ByteString.FromBase64(_options.Value.GatewaySignaturePublicKeyB64);
+            var gatewayEncPublicKey = Google.Protobuf.ByteString.FromBase64(_options.Value.GatewayEncryptionPublicKeyB64);
+            var helperEncryptionPrivateKey = Google.Protobuf.ByteString.FromBase64(_options.Value.HelperEncryptionPrivateKeyB64);
+            var helperSignPrivateKey = Google.Protobuf.ByteString.FromBase64(_options.Value.HelperSignaturePrivateKeyB64);
+
+            var decryptedEncDocumentData = await client.EncryptDecryptAsync(new DerecCrypto.EncryptDecryptRequest()
+            {
+                Ciphertext = Google.Protobuf.ByteString.CopyFrom(encryptedRequest),
+                SecretKey = helperEncryptionPrivateKey
+            });
+
+            var doc = BiatecIdentity.GetUserDocumentsSignedRequest.Parser.ParseFrom(decryptedEncDocumentData.Message.Span);
+            var verifyEncDocumentResult = await client.SignVerifyAsync(new DerecCrypto.SignVerifyRequest()
+            {
+                Message = doc.Document,
+                PublicKey = gatewaySigPublicKey,
+                Signature = doc.Signature
+            });
+
+            if (!verifyEncDocumentResult.Valid)
+            {
+                _logger.LogError("Invalid message received. The signature is not valid.");
+                return await MakeGetDocumentVersionsResponse(client, "Invalid message received. The signature is not valid.", []);
+            }
+            var shareWithAuth = BiatecIdentity.GetUserDocumentsUnsigned.Parser.ParseFrom(doc.Document);
+            var identity = shareWithAuth.Identity.ToStringUtf8();
+            var folder = MakeIdentityFolder(identity);
+            var result = await _fileStorage.ListDocumentsInFolder(folder, ".share");
+            return await MakeUserDocumentsResponse(client, "", result.Select(r => FullObjectKeyToDocId(r, identity)));
+        }
+
+        private async Task<byte[]> MakeUserDocumentsResponse(
+            DerecCrypto.DeRecCryptographyService.DeRecCryptographyServiceClient client,
+            string error,
+            IEnumerable<string> result
+            )
+        {
+            var gatewaySigPublicKey = Google.Protobuf.ByteString.FromBase64(_options.Value.GatewaySignaturePublicKeyB64);
+            var gatewayEncPublicKey = Google.Protobuf.ByteString.FromBase64(_options.Value.GatewayEncryptionPublicKeyB64);
+            var helperEncryptionPrivateKey = Google.Protobuf.ByteString.FromBase64(_options.Value.HelperEncryptionPrivateKeyB64);
+            var helperSignPrivateKey = Google.Protobuf.ByteString.FromBase64(_options.Value.HelperSignaturePrivateKeyB64);
+
+            var resMessage = new BiatecIdentity.GetUserDocumentsSignedResponse() { };
+            resMessage.Documents.AddRange(result.Select(v => ByteString.CopyFrom(Encoding.UTF8.GetBytes(v))));
+
+            var resMessageSig = await client.SignSignAsync(new DerecCrypto.SignSignRequest()
+            {
+                Message = resMessage.ToByteString(),
+                SecretKey = helperSignPrivateKey,
+            });
+            var docs = new Google.Protobuf.Collections.RepeatedField<ByteString>();
+            docs.AddRange(result.Select(v => ByteString.CopyFrom(Encoding.UTF8.GetBytes(v))));
+
+            resMessage.Result = new Result()
+            {
+                Memo = string.IsNullOrEmpty(error) ? "OK" : error,
+                Status = string.IsNullOrEmpty(error) ? StatusEnum.Ok : StatusEnum.Fail,
+            };
+            resMessage.Signature = resMessageSig.Signature;
+
+            var responseEncryptedForGateway = await client.EncryptEncryptAsync(new DerecCrypto.EncryptEncryptRequest()
+            {
+                Message = resMessage.ToByteString(),
+                PublicKey = gatewayEncPublicKey,
+            });
+
+            var ret = responseEncryptedForGateway.Ciphertext.ToByteArray();
+            return ret;
+        }
+        /// <summary>
         /// Parse the encrypted request to fetch the document history
         /// </summary>
         /// <param name="encryptedRequest"></param>
@@ -182,15 +261,19 @@ namespace BiatecIdentityHelper.BusinessController
             var ret = responseEncryptedForGateway.Ciphertext.ToByteArray();
             return ret;
         }
+        private string MakeIdentityFolder(string identity)
+        {
+            return $"{_options.Value.RootDataFolder}/{identity}";
+        }
         private string MakeObjectKey(string identity, string docId)
         {
             if (docId.EndsWith(".share") || (docId.Contains(".share.") && docId.EndsWith(".archive")))
             {
-                return $"{_options.Value.RootDataFolder}/{identity}/{docId}";
+                return $"{MakeIdentityFolder(identity)}/{docId}";
             }
             else
             {
-                return $"{_options.Value.RootDataFolder}/{identity}/{docId}.share";
+                return $"{MakeIdentityFolder(identity)}/{docId}.share";
             }
         }
         /// <summary>
@@ -201,7 +284,7 @@ namespace BiatecIdentityHelper.BusinessController
         /// <returns></returns>
         private string FullObjectKeyToDocId(string objectkey, string identity)
         {
-            var ret = objectkey.Replace($"{_options.Value.RootDataFolder}/{identity}/", "");
+            var ret = objectkey.Replace($"{MakeIdentityFolder(identity)}/", "");
             if (objectkey.EndsWith(".share"))
             {
                 return ret.Replace(".share", "");

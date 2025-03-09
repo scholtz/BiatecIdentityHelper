@@ -126,5 +126,33 @@ namespace BiatecIdentityHelper.Tests
             Assert.That(versions.Length > 1);
 
         }
+        [Test]
+        public async Task ListDocumentsInFolder()
+        {
+            // Arrange
+            string folder = "f";
+            string objectKey1 = "f/file1.txt";
+            string objectKey2 = "f/file2.txt";
+            string objectKey3 = "f/file3.zip";
+            byte[] fileBytes = Encoding.UTF8.GetBytes("Test content");
+
+            // Act
+            bool result = await _filesystemStorage.Upload(objectKey1, fileBytes);
+            // Assert
+            Assert.That(result, Is.True);
+            // Act
+            bool result2 = await _filesystemStorage.Upload(objectKey2, fileBytes);
+            // Assert
+            Assert.That(result, Is.True);
+            // Act
+            bool result3 = await _filesystemStorage.Upload(objectKey3, fileBytes);
+            // Assert
+            Assert.That(result, Is.True);
+
+            var docs = await _filesystemStorage.ListDocumentsInFolder(folder, ".txt");
+            Assert.That(docs.Contains(objectKey1));
+            Assert.That(docs.Contains(objectKey2));
+            Assert.That(!docs.Contains(objectKey3));
+        }
     }
 }

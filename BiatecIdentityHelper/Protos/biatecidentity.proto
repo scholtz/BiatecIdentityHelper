@@ -56,6 +56,31 @@ message GetDocumentVersionsUnsigned {
 }
 
 
+/*
+ * The document transfered to the sharer. Inner structure after signature
+ */
+message GetUserDocumentsSignedRequest {
+    bytes signature = 1;
+    bytes document = 2;
+}
+
+/*
+ * The document transfered to the sharer. Inner structure of the response before encryption
+ */
+message GetUserDocumentsSignedResponse {
+    Result result = 1;
+    bytes signature = 2;
+    repeated bytes documents = 3;
+}
+
+/*
+ * The document transfered to the sharer. Inner structure before signature
+ */
+message GetUserDocumentsUnsigned {
+    bytes identity = 1;
+}
+
+
 
 /*
  * The request data to fetch the specific document. Unsigned

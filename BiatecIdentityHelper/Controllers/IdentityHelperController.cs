@@ -57,5 +57,18 @@ namespace BiatecIdentityHelper.Controllers
             _logger.LogInformation($"GetDocumentVersions request {request.Length}");
             return _identityHelper.GetDocumentVersionsAsync(request);
         }
+
+        /// <summary>
+        /// Returns the list of the documents published by user
+        /// </summary>
+        /// <param name="data">Encrypted by helper public key, signed with Gateway private key</param>
+        /// <returns>True if document has been stored</returns>
+        [Route("/v1/get-user-documents")]
+        [HttpPost]
+        public Task<byte[]> GetUserDocuments([FromBody] byte[] request)
+        {
+            _logger.LogInformation($"GetUserDocuments request {request.Length}");
+            return _identityHelper.GetUserDocumentsAsync(request);
+        }
     }
 }

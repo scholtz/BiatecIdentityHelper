@@ -322,5 +322,172 @@ namespace BiatecIdentityHelperTests.BusinessController
                 Assert.That(getDocumentSignedResponseCheckSign.Valid, Is.True);
             }
         }
+
+
+        [Test]
+        public async Task ListUserDocumentsTest()
+        {
+            var document = Encoding.UTF8.GetBytes("Test1");
+            var document2 = Encoding.UTF8.GetBytes("Test2");
+            var addr = "ADDR_USER_SPECIFIC";
+            var docId1 = "userDocId1";
+            var docId2 = "userDocId2";
+            // store document 1
+            if (true)
+            {
+                var doc = new BiatecIdentity.PostDocumentUnsigned()
+                {
+                    Docid = Google.Protobuf.ByteString.CopyFromUtf8(docId1),
+                    Identity = Google.Protobuf.ByteString.CopyFromUtf8(addr),
+                    Share = Google.Protobuf.ByteString.CopyFrom(document)
+                };
+                var docBytes = doc.ToByteString();
+                var signed = await client.SignSignAsync(new DerecCrypto.SignSignRequest()
+                {
+                    Message = docBytes,
+                    SecretKey = signKeysGateway.PrivateKey
+                });
+                var docSigned = new BiatecIdentity.PostDocumentSignedRequest()
+                {
+                    Document = docBytes,
+                    Signature = signed.Signature
+                };
+                var encryptedSigned = await client.EncryptEncryptAsync(new DerecCrypto.EncryptEncryptRequest()
+                {
+                    Message = docSigned.ToByteString(),
+                    PublicKey = encKeysHelper.PublicKey
+                });
+                var encryptedSignedBytes = encryptedSigned.Ciphertext.ToByteArray();
+
+                var storedResponse = await _identityHelper.StoreDocumentAsync(encryptedSignedBytes);
+
+                var decryptedStoredResponse = await client.EncryptDecryptAsync(new DerecCrypto.EncryptDecryptRequest() { Ciphertext = ByteString.CopyFrom(storedResponse), SecretKey = encKeysGateway.PrivateKey });
+                var decryptedStoredResponseMsg = BiatecIdentity.PostDocumentSignedResponse.Parser.ParseFrom(decryptedStoredResponse.Message);
+                var isSuccess = decryptedStoredResponseMsg.IsSuccess;
+                Assert.That(isSuccess, Is.True);
+                Assert.That(decryptedStoredResponseMsg.Result.Status, Is.EqualTo(StatusEnum.Ok));
+                var decryptedStoredResponseCheckSign = await client.SignVerifyAsync(new DerecCrypto.SignVerifyRequest() { Message = ByteString.CopyFrom(BitConverter.GetBytes(isSuccess)), PublicKey = signKeysHelper.PublicKey, Signature = decryptedStoredResponseMsg.Signature });
+                Assert.That(decryptedStoredResponseCheckSign.Valid, Is.True);
+            }
+            // store document 2
+            if (true)
+            {
+                var doc = new BiatecIdentity.PostDocumentUnsigned()
+                {
+                    Docid = Google.Protobuf.ByteString.CopyFromUtf8(docId2),
+                    Identity = Google.Protobuf.ByteString.CopyFromUtf8(addr),
+                    Share = Google.Protobuf.ByteString.CopyFrom(document)
+                };
+                var docBytes = doc.ToByteString();
+                var signed = await client.SignSignAsync(new DerecCrypto.SignSignRequest()
+                {
+                    Message = docBytes,
+                    SecretKey = signKeysGateway.PrivateKey
+                });
+                var docSigned = new BiatecIdentity.PostDocumentSignedRequest()
+                {
+                    Document = docBytes,
+                    Signature = signed.Signature
+                };
+                var encryptedSigned = await client.EncryptEncryptAsync(new DerecCrypto.EncryptEncryptRequest()
+                {
+                    Message = docSigned.ToByteString(),
+                    PublicKey = encKeysHelper.PublicKey
+                });
+                var encryptedSignedBytes = encryptedSigned.Ciphertext.ToByteArray();
+
+                var storedResponse = await _identityHelper.StoreDocumentAsync(encryptedSignedBytes);
+
+                var decryptedStoredResponse = await client.EncryptDecryptAsync(new DerecCrypto.EncryptDecryptRequest() { Ciphertext = ByteString.CopyFrom(storedResponse), SecretKey = encKeysGateway.PrivateKey });
+                var decryptedStoredResponseMsg = BiatecIdentity.PostDocumentSignedResponse.Parser.ParseFrom(decryptedStoredResponse.Message);
+                var isSuccess = decryptedStoredResponseMsg.IsSuccess;
+                Assert.That(isSuccess, Is.True);
+                Assert.That(decryptedStoredResponseMsg.Result.Status, Is.EqualTo(StatusEnum.Ok));
+                var decryptedStoredResponseCheckSign = await client.SignVerifyAsync(new DerecCrypto.SignVerifyRequest() { Message = ByteString.CopyFrom(BitConverter.GetBytes(isSuccess)), PublicKey = signKeysHelper.PublicKey, Signature = decryptedStoredResponseMsg.Signature });
+                Assert.That(decryptedStoredResponseCheckSign.Valid, Is.True);
+            }
+            // store document 2 with new data .. history should not be returned
+            if (true)
+            {
+                var doc = new BiatecIdentity.PostDocumentUnsigned()
+                {
+                    Docid = Google.Protobuf.ByteString.CopyFromUtf8(docId2),
+                    Identity = Google.Protobuf.ByteString.CopyFromUtf8(addr),
+                    Share = Google.Protobuf.ByteString.CopyFrom(document2)
+                };
+                var docBytes = doc.ToByteString();
+                var signed = await client.SignSignAsync(new DerecCrypto.SignSignRequest()
+                {
+                    Message = docBytes,
+                    SecretKey = signKeysGateway.PrivateKey
+                });
+                var docSigned = new BiatecIdentity.PostDocumentSignedRequest()
+                {
+                    Document = docBytes,
+                    Signature = signed.Signature
+                };
+                var encryptedSigned = await client.EncryptEncryptAsync(new DerecCrypto.EncryptEncryptRequest()
+                {
+                    Message = docSigned.ToByteString(),
+                    PublicKey = encKeysHelper.PublicKey
+                });
+                var encryptedSignedBytes = encryptedSigned.Ciphertext.ToByteArray();
+
+                var storedResponse = await _identityHelper.StoreDocumentAsync(encryptedSignedBytes);
+
+                var decryptedStoredResponse = await client.EncryptDecryptAsync(new DerecCrypto.EncryptDecryptRequest() { Ciphertext = ByteString.CopyFrom(storedResponse), SecretKey = encKeysGateway.PrivateKey });
+                var decryptedStoredResponseMsg = BiatecIdentity.PostDocumentSignedResponse.Parser.ParseFrom(decryptedStoredResponse.Message);
+                var isSuccess = decryptedStoredResponseMsg.IsSuccess;
+                Assert.That(isSuccess, Is.True);
+                Assert.That(decryptedStoredResponseMsg.Result.Status, Is.EqualTo(StatusEnum.Ok));
+                var decryptedStoredResponseCheckSign = await client.SignVerifyAsync(new DerecCrypto.SignVerifyRequest() { Message = ByteString.CopyFrom(BitConverter.GetBytes(isSuccess)), PublicKey = signKeysHelper.PublicKey, Signature = decryptedStoredResponseMsg.Signature });
+                Assert.That(decryptedStoredResponseCheckSign.Valid, Is.True);
+            }
+
+            var versions = new List<string>();
+            // list documents
+            if (true)
+            {
+                var req = new BiatecIdentity.GetUserDocumentsUnsigned()
+                {
+                    Identity = Google.Protobuf.ByteString.CopyFromUtf8(addr)
+                };
+                var reqBytes = req.ToByteString();
+                var signedReq = await client.SignSignAsync(new DerecCrypto.SignSignRequest()
+                {
+                    Message = reqBytes,
+                    SecretKey = signKeysGateway.PrivateKey
+                });
+                var reqSigned = new BiatecIdentity.GetUserDocumentsSignedRequest()
+                {
+                    Document = reqBytes,
+                    Signature = signedReq.Signature
+                };
+                var encryptedSignedReq = await client.EncryptEncryptAsync(new DerecCrypto.EncryptEncryptRequest()
+                {
+                    Message = reqSigned.ToByteString(),
+                    PublicKey = encKeysHelper.PublicKey
+                });
+                var encryptedSignedReqBytes = encryptedSignedReq.Ciphertext.ToByteArray();
+                var docVersionsRequestResponse = await _identityHelper.GetUserDocumentsAsync(encryptedSignedReqBytes);
+
+                var encryptedResult = await client.EncryptDecryptAsync(new DerecCrypto.EncryptDecryptRequest()
+                {
+                    Ciphertext = ByteString.CopyFrom(docVersionsRequestResponse),
+                    SecretKey = encKeysGateway.PrivateKey
+                });
+
+                var getDocumentSignedResponse = BiatecIdentity.GetUserDocumentsSignedResponse.Parser.ParseFrom(encryptedResult.Message);
+                versions = getDocumentSignedResponse.Documents.Select(v => v.ToStringUtf8()).ToList();
+                Assert.That(getDocumentSignedResponse.Documents.Count, Is.EqualTo(2));
+                Assert.That(getDocumentSignedResponse.Result.Status, Is.EqualTo(StatusEnum.Ok));
+                Assert.That(versions.Contains(docId1), Is.True);
+                Assert.That(versions.Contains(docId2), Is.True);
+                var cleanResponse = new BiatecIdentity.GetUserDocumentsSignedResponse();
+                cleanResponse.Documents.AddRange(getDocumentSignedResponse.Documents);
+                var getDocumentSignedResponseCheckSign = await client.SignVerifyAsync(new DerecCrypto.SignVerifyRequest() { Message = cleanResponse.ToByteString(), PublicKey = signKeysHelper.PublicKey, Signature = getDocumentSignedResponse.Signature });
+                Assert.That(getDocumentSignedResponseCheckSign.Valid, Is.True);
+            }
+        }
     }
 }

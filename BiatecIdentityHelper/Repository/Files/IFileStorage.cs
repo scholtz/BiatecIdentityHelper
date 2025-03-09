@@ -39,5 +39,27 @@ namespace BiatecIdentityHelper.Repository.Files
         /// <param name="objectKey"></param>
         /// <returns></returns>
         public Task<string[]> ListVersions(string objectKey);
+
+        /// <summary>
+        /// List documents in folder
+        /// 
+        /// for example on input folder1 and filter .txt, the response lists all documents matching filter
+        /// 
+        /// >> 
+        /// folder1/file.txt
+        /// folder1/file.txt.1741519100.archive
+        /// folder1/file.txt.1741519158.archive
+        /// folder2/file.txt
+        /// 
+        /// returns
+        /// >>
+        /// 
+        /// folder1/file.txt
+        /// 
+        /// </summary>
+        /// <param name="folder">folder</param>
+        /// <param name="filter">Filter extension - file must end on this text. If not defined the filter is not applied</param>
+        /// <returns>list of files in folder</returns>
+        public Task<string[]> ListDocumentsInFolder(string folder, string filter);
     }
 }

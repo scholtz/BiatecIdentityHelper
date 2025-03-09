@@ -20,6 +20,67 @@ namespace BiatecIdentityHelper.Repository.Files
             _options = options;
             _logger = logger;
         }
+
+        /// <summary>
+        /// List documents in folder
+        /// 
+        /// for example on input folder1 and filter .txt, the response lists all documents matching filter
+        /// 
+        /// >> 
+        /// folder1/file.txt
+        /// folder1/file.txt.1741519100.archive
+        /// folder1/file.txt.1741519158.archive
+        /// folder2/file.txt
+        /// 
+        /// returns
+        /// >>
+        /// 
+        /// folder1/file.txt
+        /// 
+        /// </summary>
+        /// <param name="folder">folder</param>
+        /// <param name="filter">Filter extension - file must end on this text. If not defined the filter is not applied</param>
+        /// <returns>list of files in folder</returns>
+        public async Task<string[]> ListDocumentsInFolder(string folder, string filter)
+        {
+            var request = new ListObjectsV2Request
+            {
+                BucketName = _options.Value.Bucket,
+                Prefix = folder
+            };
+
+            var result = new List<string>();
+            ListObjectsV2Response response;
+
+            RegionEndpoint linodeRegionEndpoint = RegionEndpoint.EUCentral1;
+            AmazonS3Config awsConfig = new AmazonS3Config()
+            {
+                RegionEndpoint = linodeRegionEndpoint,
+                ServiceURL = _options.Value.Host
+            };
+            var awsCredentials = new BasicAWSCredentials(_options.Value.Key, _options.Value.Secret);
+            var awsClient = new AmazonS3Client(awsCredentials, awsConfig);
+            do
+            {
+                response = await awsClient.ListObjectsV2Async(request);
+                foreach (var obj in response.S3Objects)
+                {
+                    if (string.IsNullOrEmpty(filter))
+                    {
+                        result.Add(obj.Key);
+                    }
+                    else if (obj.Key.EndsWith(filter))
+                    {
+                        result.Add(obj.Key);
+                    }
+                }
+
+                request.ContinuationToken = response.NextContinuationToken;
+            } while (response.IsTruncated);
+
+            return result.ToArray();
+        }
+
         /// <summary>
         /// List versions of the object key
         /// 

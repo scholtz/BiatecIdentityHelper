@@ -18,6 +18,46 @@ namespace BiatecIdentityHelper.Repository.Files
         }
 
         /// <summary>
+        /// List documents in folder
+        /// 
+        /// for example on input folder1 and filter .txt, the response lists all documents matching filter
+        /// 
+        /// >> 
+        /// folder1/file.txt
+        /// folder1/file.txt.1741519100.archive
+        /// folder1/file.txt.1741519158.archive
+        /// folder2/file.txt
+        /// 
+        /// returns
+        /// >>
+        /// 
+        /// folder1/file.txt
+        /// 
+        /// </summary>
+        /// <param name="folder">folder</param>
+        /// <param name="filter">Filter extension - file must end on this text. If not defined the filter is not applied</param>
+        /// <returns>list of files in folder</returns>
+        public async Task<string[]> ListDocumentsInFolder(string folder, string filter)
+        {
+            var bucket = _options.Value.Bucket;
+            if (!folder.EndsWith("/"))
+            {
+                folder = folder + "/";
+            }
+            if (!Directory.Exists(bucket))
+                throw new DirectoryNotFoundException($"Folder not found: {bucket}");
+            var files = Directory.GetFiles(bucket+"/"+ folder);
+            if (string.IsNullOrEmpty(filter))
+            {
+                return files.Select(f => $"{folder}{Path.GetFileName(f)}").ToArray();
+            }
+            return
+                files.Where(file => Path.GetFileName(file).EndsWith(filter))
+                .Select(f => $"{folder}{Path.GetFileName(f)}")
+                .ToArray();
+        }
+
+        /// <summary>
         /// List versions of the object key
         /// 
         /// for example on input file.txt the response may be
@@ -52,7 +92,7 @@ namespace BiatecIdentityHelper.Repository.Files
 
             return Directory.GetFiles(folder)
                             .Where(file => Path.GetFileName(file).StartsWith(fileName))
-                            .Select(f=>$"{rootFolder}{Path.GetFileName(f)}")
+                            .Select(f => $"{rootFolder}{Path.GetFileName(f)}")
                             .ToArray();
         }
 
